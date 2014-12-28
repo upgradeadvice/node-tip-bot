@@ -3,6 +3,9 @@
 
 # Changes
 #### Added Bleutrade and Cryptonator.
+#### Fixed a security issue.
+#### Added SASL Authentication.
+
 #### Configured for MonetaryUnit http://www.monetaryunit.org/
 ###Join us at:
 ```
@@ -31,12 +34,14 @@ IRC network connection info.
 * **host** - hostname of the IRC server
 * **port** - port of the IRC server
 * **secure** - use secured connection
+* **sasl** - use SASL authentication
+* **sasl_password** - SASL password
 * **status_command** - NickServ command to get nick's login status, ACC on freenode, STATUS on some other networks
 
 ## login
 IRC network connection and login info.
 * **nickname** - bot's nickname
-* **username** - bot's username
+* **username** - bot's username / SASL username
 * **realname** - bot's realname
 * **nickserv_password** - nickserv password to identify with
 
@@ -74,7 +79,7 @@ Basic coin settings.
 Basic git settings.
 * ***enabled*** - `true` or `false`
 * ***host*** - `0.0.0.0` or ip of your server
-* ***port*** - `3420` or the posrt you want to use, make sure you forward the port
+* ***port*** - `3420` or the port you want to use, make sure you forward the port
 * ***channels*** `#BotGitChannel` channel to post git events
 
 ## adding webhooks
@@ -88,18 +93,18 @@ In your github repo
 
 ## urlget
 Enable or Disable the bot from responding to URL's typed in the channel.
-* Options - 
+* Options -
  * `enabled: true or false`
  *  ***channels*** `#BotChannel` channel to post URL responses
 
 ## joke
 Enable or Disable the bot from saying a joke with the !joke command.
-* Options - 
+* Options -
  * `enabled: true or false`
 
 ## random
 Enable or Disable the bot from saying a random quote with the !random command.
-* Options - 
+* Options -
  * `enabled: true or false`
 
 ## allcoin
@@ -111,7 +116,7 @@ Enable or Disable the bot from saying your Allcoin coin price with !ticker.
 
 ## allcoin2
 * Options none
-  * `url: https://www.allcoin.com/api2/pair/` Dont touch this link 
+  * `url: https://www.allcoin.com/api2/pair/` Dont touch this link
 
 ## bittrex
 Enable or Disable the bot from saying your Allcoin coin price with !ticker.
@@ -119,21 +124,21 @@ Enable or Disable the bot from saying your Allcoin coin price with !ticker.
  * `enabled: true or false`
  * `coin: DOPE` Your coins short name
  * `url: https://www.allcoin.com/api2/pair/DRS_DOPE` Your coins Allcoin api link
-  
+
 ## bittrex2
 * Options none
   * `url: https://bittrex.com/api/v1.1/public/getmarketsummary?market=` Dont touch this link
 
 ## cryptsy
 Enable or Disable the bot from saying your Cryptsy coin price with !ticker2.
-* Options - 
+* Options -
  * `enabled: true or false`
- * `coin: FST` Your coins short name 
+ * `coin: FST` Your coins short name
  * `url: http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid=44` Your coins Cryptsy api link
 
 ## btc
 Enable or Disable the bot from saying btc price ticker with !btc.
-* Options - 
+* Options -
  * `enabled: true or false`
 
 ## bleutrade
@@ -143,7 +148,7 @@ Enable or Disable the bot from saying btc price ticker with !btc.
 ## cryptonator
 * Options none
   * `url: https://www.cryptonator.com/api/full/mue-btc` Dont touch this link
- 
+
 ## commands
 Here you can restrict some commands to work only on PM/channel.
 
@@ -166,7 +171,7 @@ rpcallowip=<your bots ip address or just 127.0.0.1 if hosted on the same machine
 # Start The Bot
 To run the bot simply use `node bin/tipbot` or `npm start`.
 
-IF you ger this error:
+If you get this error:
 ```bash
 npm WARN This failure might be due to the use of legacy binary "node"
 npm WARN For further explanations, please read
@@ -207,9 +212,9 @@ If npm isn't available:
 | `bittrex`   | `<coin> or none`  | displays the current BitTrex coin price use an arg, (!bittrex CANN)               |
 | `cryptsy`   |                   | displays the current Crypsty coin price                                           |
 | `bleutrade` |                   | displays the current Bleutrade coin price                                         |
-|`cryptonator`|                   | displays the current Cryptonator coin price                                       | 
+|`cryptonator`|                   | displays the current Cryptonator coin price                                       |
 | `btc`       |                   | displays the current BTC-e BTC price                                              |
-| `joke`      |                   | displays a random joke                                                            | 
+| `joke`      |                   | displays a random joke                                                            |
 | `random`    |                   | displays a random quote                                                           |
-| `help`      |                   | displays configured help message (by default similiar to this one)                |
+| `help`      |                   | displays configured help message (by default similar to this one)                 |
 | `terms`     |                   | displays terms and conditions for using the tip bot                               |
