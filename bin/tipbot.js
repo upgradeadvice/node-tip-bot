@@ -1,4 +1,5 @@
 var irc = require('irc'),
+    colors = require('irc-colors'),
     winston = require('winston'),
     fs = require('fs'),
     yaml = require('js-yaml'),
@@ -22,6 +23,15 @@ process.on('exit', function() {
 
 // load settings
 var settings = yaml.load(fs.readFileSync('./config/config.yml', 'utf-8'));
+
+// Colors
+var errorcolor  = colors.underline.red.bggray,
+    warncolor   = colors.fuchsia.bggray,
+    raincolor   = colors.aqua,
+    helpcolor   = colors.lime,
+    tickercolor = colors.navy,
+    amountcolor = colors.silver.bgblack,
+    snamecolor  = colors.lime.bgblack;
 
 // Joke/random URL
 var joke = (settings.joke.url),
@@ -273,7 +283,7 @@ client.addListener('message', function(from, channel, message) {
     if (command == 'help' || command == 'terms' || command == 'commands' || command == 'bot') {
         for (var i = 0; i < settings.messages[command].length; i++) {
             var message = settings.messages[command][i];
-            client.say(channel, message.expand({}));
+            client.say(channel, helpcolor(message.expand({})));
         }
 
         return;
@@ -287,16 +297,16 @@ client.addListener('message', function(from, channel, message) {
         // check if the sending user is logged in (identified) with nickserv
         if (!status) {
             winston.info('%s tried to use command `%s`, but is not identified.', from, message);
-            client.say(channel, settings.messages.not_identified.expand({
+            client.say(channel, warncolor(settings.messages.not_identified.expand({
                 name: from
-            }));
+            })));
             return;
         }
         switch (command) {
             case 'rain':
                 var match = message.match(/^.?rain ([\d\.]+) ?(\d+)?/);
                 if (match === null || !match[1]) {
-                    client.say(channel, 'Usage: !rain <amount> [max people]');
+                    client.say(channel, warncolor('Usage: !rain <amount> [max people]'));
                     return;
                 }
 
@@ -304,10 +314,10 @@ client.addListener('message', function(from, channel, message) {
                 var max = Number(match[2]);
 
                 if (isNaN(amount)) {
-                    client.say(channel, settings.messages.invalid_amount.expand({
+                    client.say(channel, errorcolor(settings.messages.invalid_amount.expand({
                         name: from,
-                        amount: match[2]
-                    }));
+                        amount: amountcolor(match[2])
+                    })));
                     return;
                 }
 
@@ -324,9 +334,9 @@ client.addListener('message', function(from, channel, message) {
                 coin.getBalance(from.toLowerCase(), settings.coin.min_confirmations, function(err, balance) {
                     if (err) {
                         winston.error('Error in !tip command.', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var balance = typeof(balance) == 'object' ? balance.result : balance;
@@ -347,11 +357,11 @@ client.addListener('message', function(from, channel, message) {
 
                             if (amount / max < settings.coin.min_rain) {
                             	locks[from.toLowerCase()] = null;
-                                client.say(channel, settings.messages.rain_too_small.expand({
+                                client.say(channel, warncolor(settings.messages.rain_too_small.expand({
                                     from: from,
-                                    amount: amount,
-                                    min_rain: settings.coin.min_rain * max
-                                }));
+                                    amount: amountcolor(amount),
+                                    min_rain: amountcolor(settings.coin.min_rain * max)
+                                })));
                                 return;
                             }
 
@@ -365,20 +375,21 @@ client.addListener('message', function(from, channel, message) {
                                 });
                             }
 
-                            client.say(channel, settings.messages.rain.expand({
+                            client.say(channel, raincolor(settings.messages.rain.expand({
                                 name: from,
-                                amount: amount / max,
+                                amount: amountcolor(amount / max),
                                 list: whole_channel ? 'the whole channel' : names.join(', ')
-                            }));
+                            })));
                         });
                     } else {
                         winston.info('%s tried to tip %s %d, but has only %d', from, to, amount, balance);
-                        client.say(channel, settings.messages.no_funds.expand({
+                        client.say(channel, warncolor(settings.messages.no_funds.expand({
                             name: from,
-                            balance: balance,
-                            short: amount - balance,
-                            amount: amount
-                        }));
+                            balance: amountcolor(balance),
+                            short: amountcolor(amount - balance),
+                            short_name: snamecolor(settings.coin.short_name),
+                            amount: amountcolor(amount)
+                        })));
                     }
                 });
                 break;
@@ -390,13 +401,13 @@ client.addListener('message', function(from, channel, message) {
                         var user = from.toLowerCase();
                         tipbot.sendCustomRequest(allcoin, function(data) {
                             var info = data;
-                            client.say(channel, settings.messages.ticker.expand({
+                            client.say(channel, tickercolor(settings.messages.ticker.expand({
                                 name: user,
                                 coin: settings.allcoin.coin,
                                 trade_price: info.data.trade_price,
                                 exchange_volume: info.data.exchange_volume,
                                 type_volume: info.data.type_volume
-                            }));
+                            })));
                         });
                     } else {
                         var user = from.toLowerCase();
@@ -404,19 +415,19 @@ client.addListener('message', function(from, channel, message) {
                         tipbot.sendCustomRequest(allcoin2 + str + '_BTC', function(data, error) {
                             var info = data;
                             if (error || info.code === 0) {
-                                client.say(channel, settings.messages.tickererr.expand({
+                                client.say(channel, tickercolor(settings.messages.tickererr.expand({
                                     name: user,
                                     coin: str
-                                }));
+                                })));
                                 return;
                             }
-                            client.say(channel, settings.messages.ticker.expand({
+                            client.say(channel, tickercolor(settings.messages.ticker.expand({
                                 name: user,
                                 coin: str,
                                 trade_price: info.data.trade_price,
                                 exchange_volume: info.data.exchange_volume,
                                 type_volume: info.data.type_volume
-                            }));
+                            })));
                         });
                     }
                 } else {
@@ -430,19 +441,19 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(cryptsy, function(data, err) {
                         if (err) {
                             winston.error('Error in !cryptsy command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Price From Cryptsy', info.return.markets.FST.lasttradeprice, info.return.markets.FST.volume);
-                        client.say(channel, settings.messages.cryptsy.expand({
+                        client.say(channel, tickercolor(settings.messages.cryptsy.expand({
                             name: user,
                             coin: settings.cryptsy.coin,
                             price: info.return.markets.FST.lasttradeprice,
                             volume: info.return.markets.FST.volume
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -455,19 +466,19 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(bleutrade, function(data, err) {
                         if (err) {
                             winston.error('Error in !bleutrade command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Price From Bleutrade', info.result[0].Last, info.result[0].Volume);
-                        client.say(channel, settings.messages.bleutrade.expand({
+                        client.say(channel, tickercolor(settings.messages.bleutrade.expand({
                             name: user,
                             coin: settings.bleutrade.coin,
                             price: info.result[0].Last,
                             volume: info.result[0].Volume
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -480,19 +491,19 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(cryptonator, function(data, err) {
                         if (err) {
                             winston.error('Error in !cryptonator command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Price From Cryptonator', info.ticker.price, info.ticker.volume);
-                        client.say(channel, settings.messages.cryptonator.expand({
+                        client.say(channel, tickercolor(settings.messages.cryptonator.expand({
                             name: user,
                             coin: settings.cryptonator.coin,
                             price: info.ticker.price,
                             volume: info.ticker.volume
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -505,19 +516,19 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(btce, function(data, err) {
                         if (err) {
                             winston.error('Error in !btce command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Price From btce', info.btc_usd.buy, info.btc_usd.vol_cur);
-                        client.say(channel, settings.messages.btc.expand({
+                        client.say(channel, tickercolor(settings.messages.btc.expand({
                             name: user,
                             coin: settings.btc.coin,
                             price_dollar: info.btc_usd.buy,
                             volume: info.btc_usd.vol_cur
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -531,13 +542,13 @@ client.addListener('message', function(from, channel, message) {
                         var user = from.toLowerCase();
                         tipbot.sendCustomRequest(bittrex, function(data) {
                             var info = data;
-                            client.say(channel, settings.messages.bittrex.expand({
+                            client.say(channel, tickercolor(settings.messages.bittrex.expand({
                                 name: user,
                                 coin: settings.bittrex.coin,
                                 last: info.result[0].Last.toFixed(8),
                                 basevolume: info.result[0].BaseVolume.toFixed(8),
                                 volume: info.result[0].Volume
-                            }));
+                            })));
                         });
                     } else {
                         var user = from.toLowerCase();
@@ -545,19 +556,19 @@ client.addListener('message', function(from, channel, message) {
                         tipbot.sendCustomRequest(bittrex2 + 'BTC-' + str, function(data, error) {
                             var info = data;
                             if (error || info.success === false) {
-                                client.say(channel, settings.messages.bittrexerr.expand({
+                                client.say(channel, tickercolor(settings.messages.bittrexerr.expand({
                                     name: user,
                                     coin: str
-                                }));
+                                })));
                                 return;
                             }
-                            client.say(channel, settings.messages.bittrex.expand({
+                            client.say(channel, tickercolor(settings.messages.bittrex.expand({
                                 name: user,
                                 coin: str,
                                 last: info.result[0].Last.toFixed(8),
                                 basevolume: info.result[0].BaseVolume.toFixed(8),
                                 volume: info.result[0].Volume
-                            }));
+                            })));
                         });
                     }
                 } else {
@@ -571,17 +582,17 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(joke, function(data, err) {
                         if (err) {
                             winston.error('Error in !joke command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Joke', info.value.joke);
-                        client.say(channel, settings.messages.joke.expand({
+                        client.say(channel, helpcolor(settings.messages.joke.expand({
                             name: user,
                             joke: info.value.joke
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -594,17 +605,17 @@ client.addListener('message', function(from, channel, message) {
                     tipbot.sendCustomRequest(random, function(data, err) {
                         if (err) {
                             winston.error('Error in !random command.', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var info = data;
                         winston.info(user, 'Fetched Random Quote', info.quote);
-                        client.say(channel, settings.messages.random.expand({
+                        client.say(channel, helpcolor(settings.messages.random.expand({
                             name: user,
                             random: info.quote
-                        }));
+                        })));
                     });
                 } else {
                     return;
@@ -614,34 +625,34 @@ client.addListener('message', function(from, channel, message) {
             case 'tip':
                 var match = message.match(/^.?tip (\S+) ([\d\.]+)/);
                 if (match === null || match.length < 3) {
-                    client.say(channel, 'Usage: !tip <nickname> <amount>');
+                    client.say(channel, errorcolor('Usage: !tip <nickname> <amount>'));
                     return;
                 }
                 var to = match[1];
                 var amount = Number(match[2]);
 
                 if (isNaN(amount)) {
-                    client.say(channel, settings.messages.invalid_amount.expand({
+                    client.say(channel, errorcolor(settings.messages.invalid_amount.expand({
                         name: from,
-                        amount: match[2]
-                    }));
+                        amount: amountcolor(match[2])
+                    })));
                     return;
                 }
 
                 if (to.toLowerCase() == from.toLowerCase()) {
-                    client.say(channel, settings.messages.tip_self.expand({
+                    client.say(channel, errorcolor(settings.messages.tip_self.expand({
                         name: from
-                    }));
+                    })));
                     return;
                 }
 
                 if (amount < settings.coin.min_tip) {
                 	locks[from.toLowerCase()] = null;
-                    client.say(channel, settings.messages.tip_too_small.expand({
+                    client.say(channel, warncolor(settings.messages.tip_too_small.expand({
                         from: from,
                         to: to,
-                        amount: amount
-                    }));
+                        amount: amountcolor(amount)
+                    })));
                     return;
                 }
 
@@ -654,9 +665,9 @@ client.addListener('message', function(from, channel, message) {
                     if (err) {
                     	locks[from.toLowerCase()] = null;
                         winston.error('Error in !tip command.', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var balance = typeof(balance) == 'object' ? balance.result : balance;
@@ -666,28 +677,30 @@ client.addListener('message', function(from, channel, message) {
                         	locks[from.toLowerCase()] = null;
                         	if (err || !reply) {
                                 winston.error('Error in !tip command', err);
-                                client.say(channel, settings.messages.error.expand({
+                                client.say(channel, errorcolor(settings.messages.error.expand({
                                     name: from
-                                }));
+                                })));
                                 return;
                             }
 
                             winston.info('%s tipped %s %d%s', from, to, amount, settings.coin.short_name);
-                            client.say(channel, settings.messages.tipped.expand({
+                            client.say(channel, helpcolor(settings.messages.tipped.expand({
                                 from: from,
                                 to: to,
-                                amount: amount
-                            }));
+                                amount: amountcolor(amount),
+                                short_name: snamecolor(settings.coin.short_name)
+                            })));
                         });
                     } else {
                     	locks[from.toLowerCase()] = null;
                         winston.info('%s tried to tip %s %d, but has only %d', from, to, amount, balance);
-                        client.say(channel, settings.messages.no_funds.expand({
+                        client.say(channel, warncolor(settings.messages.no_funds.expand({
                             name: from,
-                            balance: balance,
-                            short: amount - balance,
-                            amount: amount
-                        }));
+                            balance: amountcolor(balance),
+                            short: amountcolor(amount - balance),
+                            short_name: snamecolor(settings.coin.short_name),
+                            amount: amountcolor(amount)
+                        })));
                     }
                 });
                 break;
@@ -697,16 +710,16 @@ client.addListener('message', function(from, channel, message) {
                 client.getAddress(user, function(err, address) {
                     if (err) {
                         winston.error('Error in !address command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var user = from.toLowerCase();
-                    client.say(channel, settings.messages.deposit_address.expand({
+                    client.say(channel, helpcolor(settings.messages.deposit_address.expand({
                         name: user,
                         address: address
-                    }));
+                    })));
                 });
                 break;
 
@@ -714,16 +727,16 @@ client.addListener('message', function(from, channel, message) {
                 coin.getDifficulty(function(err, get_difficulty) {
                     if (err) {
                         winston.error('Error in !getdiff command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var get_difficulty = typeof(get_difficulty) == 'object' ? get_difficulty.result : get_difficulty;
 
-                    client.say(channel, settings.messages.getdiff.expand({
+                    client.say(channel, helpcolor(settings.messages.getdiff.expand({
                         diff: get_difficulty
-                    }));
+                    })));
                 });
                 break;
 
@@ -731,16 +744,16 @@ client.addListener('message', function(from, channel, message) {
                 coin.getblockcount(function(err, get_blockcount) {
                     if (err) {
                         winston.error('Error in !getblock command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var get_blockcount = typeof(get_blockcount) == 'object' ? get_blockcount.result : get_blockcount;
 
-                    client.say(channel, settings.messages.getblock.expand({
+                    client.say(channel, helpcolor(settings.messages.getblock.expand({
                         block: get_blockcount
-                    }));
+                    })));
                 });
                 break;
 
@@ -748,61 +761,61 @@ client.addListener('message', function(from, channel, message) {
                 coin.getnetworkhashps(function(err, get_networkhps) {
                     if (err) {
                         winston.error('Error in !info command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var get_networkhps = typeof(get_networkhps) == 'object' ? get_networkhps.result : get_networkhps;
                     coin.getDifficulty(function(err, get_difficulty) {
                         if (err) {
                             winston.error('Error in !info command', err);
-                            client.say(channel, settings.messages.error.expand({
+                            client.say(channel, errorcolor(settings.messages.error.expand({
                                 name: from
-                            }));
+                            })));
                             return;
                         }
                         var get_difficulty = typeof(get_difficulty) == 'object' ? get_difficulty.result : get_difficulty;
                         coin.getblockcount(function(err, get_blockcount) {
                             if (err) {
                                 winston.error('Error in !info command', err);
-                                client.say(channel, settings.messages.error.expand({
+                                client.say(channel, errorcolor(settings.messages.error.expand({
                                     name: from
-                                }));
+                                })));
                                 return;
                             }
                             var get_blockcount = typeof(get_blockcount) == 'object' ? get_blockcount.result : get_blockcount;
                             if (get_networkhps < 1000000) {
                                 winston.info('khs', get_networkhps);
-                                client.say(channel, settings.messages.infok.expand({
+                                client.say(channel, helpcolor(settings.messages.infok.expand({
                                     networkhps: (get_networkhps / 1000).toFixed(2),
                                     diff: get_difficulty,
                                     block: get_blockcount
-                                }));
+                                })));
                             } else {
                                 if (get_networkhps < 1000000000) {
                                     winston.info('mhs', get_networkhps);
-                                    client.say(channel, settings.messages.infom.expand({
+                                    client.say(channel, helpcolor(settings.messages.infom.expand({
                                         networkhps: (get_networkhps / 1000000).toFixed(2),
                                         diff: get_difficulty,
                                         block: get_blockcount
-                                    }));
+                                    })));
                                 } else {
                                     if (get_networkhps < 1000000000000) {
                                         winston.info('ghs', get_networkhps);
-                                        client.say(channel, settings.messages.infog.expand({
+                                        client.say(channel, helpcolor(settings.messages.infog.expand({
                                             networkhps: (get_networkhps / 1000000000).toFixed(2),
                                             diff: get_difficulty,
                                             block: get_blockcount
-                                        }));
+                                        })));
                                     } else {
                                         if (get_networkhps < 1000000000000000) {
                                             winston.info('ths', get_networkhps);
-                                            client.say(channel, settings.messages.infot.expand({
+                                            client.say(channel, helpcolor(settings.messages.infot.expand({
                                                 networkhps: (get_networkhps / 1000000000000).toFixed(2),
                                                 diff: get_difficulty,
                                                 block: get_blockcount
-                                            }));
+                                            })));
                                         }
                                     }
                                 }
@@ -816,35 +829,35 @@ client.addListener('message', function(from, channel, message) {
                 coin.getnetworkhashps(function(err, get_networkhps) {
                     if (err) {
                         winston.error('Error in !networkhps command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
                     var get_networkhps = typeof(get_networkhps) == 'object' ? get_networkhps.result : get_networkhps;
                     if (get_networkhps < 1000000) {
                         winston.info('khs', get_networkhps);
-                        client.say(channel, settings.messages.networkhps.expand({
+                        client.say(channel, helpcolor(settings.messages.networkhps.expand({
                             networkhps: (get_networkhps / 1000).toFixed(2)
-                        }));
+                        })));
                     } else {
                         if (get_networkhps < 1000000000) {
                             winston.info('mhs', get_networkhps);
-                            client.say(channel, settings.messages.networmhps.expand({
+                            client.say(channel, helpcolor(settings.messages.networmhps.expand({
                                 networkhps: (get_networkhps / 1000000).toFixed(2)
-                            }));
+                            })));
                         } else {
                             if (get_networkhps < 1000000000000) {
                                 winston.info('ghs', get_networkhps);
-                                client.say(channel, settings.messages.networghps.expand({
+                                client.say(channel, helpcolor(settings.messages.networghps.expand({
                                     networkhps: (get_networkhps / 1000000000).toFixed(2)
-                                }));
+                                })));
                             } else {
                                 if (get_networkhps < 1000000000000000) {
                                     winston.info('ths', get_networkhps);
-                                    client.say(channel, settings.messages.networthps.expand({
+                                    client.say(channel, helpcolor(settings.messages.networthps.expand({
                                         networkhps: (get_networkhps / 1000000000000).toFixed(2)
-                                    }));
+                                    })));
                                 }
                             }
                         }
@@ -857,9 +870,9 @@ client.addListener('message', function(from, channel, message) {
                 coin.getBalance(user, settings.coin.min_confirmations, function(err, balance) {
                     if (err) {
                         winston.error('Error in !balance command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
 
@@ -868,20 +881,22 @@ client.addListener('message', function(from, channel, message) {
                     coin.getBalance(user, 0, function(err, unconfirmed_balance) {
                         if (err) {
                             winston.error('Error in !balance command', err);
-                            client.say(channel, settings.messages.balance.expand({
-                                balance: balance,
+                            client.say(channel, errorcolor(settings.messages.balance.expand({
+                                balance: amountcolor(balance),
+                                short_name: snamecolor(settings.coin.short_name),
                                 name: user
-                            }));
+                            })));
                             return;
                         }
                         var user = from.toLowerCase();
                         var unconfirmed_balance = typeof(unconfirmed_balance) == 'object' ? unconfirmed_balance.result : unconfirmed_balance;
 
-                        client.say(channel, settings.messages.balance_unconfirmed.expand({
-                            balance: balance,
+                        client.say(channel, helpcolor(settings.messages.balance_unconfirmed.expand({
+                            balance: amountcolor(balance),
                             name: user,
-                            unconfirmed: unconfirmed_balance - balance
-                        }));
+                            unconfirmed: amountcolor(unconfirmed_balance - balance),
+                            short_name: snamecolor(settings.coin.short_name)
+                        })));
                     });
                 });
                 break;
@@ -889,7 +904,7 @@ client.addListener('message', function(from, channel, message) {
             case 'withdraw':
                 var match = message.match(/^.?withdraw (\S+)$/);
                 if (match === null) {
-                    client.say(channel, 'Usage: !withdraw <' + settings.coin.full_name + ' address>');
+                    client.say(channel, helpcolor('Usage: !withdraw <' + settings.coin.full_name + ' address>'));
                     return;
                 }
                 var address = match[1];
@@ -897,9 +912,9 @@ client.addListener('message', function(from, channel, message) {
                 coin.validateAddress(address, function(err, reply) {
                     if (err) {
                         winston.error('Error in !withdraw command', err);
-                        client.say(channel, settings.messages.error.expand({
+                        client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
-                        }));
+                        })));
                         return;
                     }
 
@@ -907,42 +922,44 @@ client.addListener('message', function(from, channel, message) {
                         coin.getBalance(from.toLowerCase(), settings.coin.min_confirmations, function(err, balance) {
                             if (err) {
                                 winston.error('Error in !withdraw command', err);
-                                client.say(channel, settings.messages.error.expand({
+                                client.say(channel, errorcolor(settings.messages.error.expand({
                                     name: from
-                                }));
+                                })));
                                 return;
                             }
                             var balance = typeof(balance) == 'object' ? balance.result : balance;
 
                             if (balance < settings.coin.min_withdraw) {
                                 winston.warn('%s tried to withdraw %d, but min is set to %d', from, balance, settings.coin.min_withdraw);
-                                client.say(channel, settings.messages.withdraw_too_small.expand({
+                                client.say(channel, warncolor(settings.messages.withdraw_too_small.expand({
                                     name: from,
-                                    balance: balance
-                                }));
+                                    balance: amountcolor(balance),
+                                    short_name: snamecolor(settings.coin.short_name)
+                                })));
                                 return;
                             }
 
                             coin.sendFrom(from.toLowerCase(), address, balance - settings.coin.withdrawal_fee, function(err, reply) {
                                 if (err) {
                                     winston.error('Error in !withdraw command', err);
-                                    client.say(channel, settings.messages.error.expand({
+                                    client.say(channel, errorcolor(settings.messages.error.expand({
                                         name: from
-                                    }));
+                                    })));
                                     return;
                                 }
 
                                 var values = {
                                     name: from,
                                     address: address,
-                                    balance: balance,
-                                    amount: balance - settings.coin.withdrawal_fee,
+                                    balance: amountcolor(amount),
+                                    amount: amountcolor(balance - settings.coin.withdrawal_fee),
+                                    short_name: snamecolor(settings.coin.short_name),
                                     transaction: reply
                                 };
 
                                 for (var i = 0; i < settings.messages.withdraw_success.length; i++) {
                                     var msg = settings.messages.withdraw_success[i];
-                                    client.say(channel, msg.expand(values));
+                                    client.say(channel, helpcolor(msg.expand(values)));
                                 }
 
                                 // transfer the rest (usually withdrawal fee - txfee) to bots wallet
@@ -960,10 +977,10 @@ client.addListener('message', function(from, channel, message) {
                         });
                     } else {
                         winston.warn('%s tried to withdraw to an invalid address', from);
-                        client.say(channel, settings.messages.invalid_address.expand({
+                        client.say(channel, warncolor(settings.messages.invalid_address.expand({
                             address: address,
                             name: from
-                        }));
+                        })));
                     }
                 });
                 break;
