@@ -333,6 +333,7 @@ client.addListener('message', function(from, channel, message) {
 
                 coin.getBalance(from.toLowerCase(), settings.coin.min_confirmations, function(err, balance) {
                     if (err) {
+                        locks[from.toLowerCase()] = null;
                         winston.error('Error in !tip command.', err);
                         client.say(channel, errorcolor(settings.messages.error.expand({
                             name: from
@@ -382,6 +383,7 @@ client.addListener('message', function(from, channel, message) {
                             })));
                         });
                     } else {
+                        locks[from.toLowerCase()] = null;
                         winston.info('%s tried to tip %s %d, but has only %d', from, to, amount, balance);
                         client.say(channel, warncolor(settings.messages.no_funds.expand({
                             name: from,
@@ -630,6 +632,9 @@ client.addListener('message', function(from, channel, message) {
                 }
                 var to = match[1];
                 var amount = Number(match[2]);
+                // lock
+                if(locks.hasOwnProperty(from.toLowerCase()) && locks[from.toLowerCase()]) return;
+                locks[from.toLowerCase()] = true;
 
                 if (isNaN(amount)) {
                     client.say(channel, errorcolor(settings.messages.invalid_amount.expand({
